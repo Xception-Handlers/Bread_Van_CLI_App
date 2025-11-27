@@ -1,3 +1,4 @@
+import re
 from datetime import datetime
 from sqlalchemy.ext.mutable import MutableList
 from sqlalchemy import JSON
