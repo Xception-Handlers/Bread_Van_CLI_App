@@ -83,3 +83,9 @@ class Resident(User):
     def view_driver_stats(self, driverId):
         driver = Driver.query.get(driverId)
         return driver
+    
+    def update(self, payload):
+        if self.inbox is None:
+            self.inbox = []
+
+        self.receive_notif(message_text)
