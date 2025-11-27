@@ -94,6 +94,16 @@ class Resident(User):
         if hasattr(drive, "id"):
             self._subscriptions.add(drive.id)
 
+    def unsubscribe(self, drive):
+        if not hasattr(self, "_subscriptions"):
+            self._subscriptions = set()
+
+        if hasattr(drive, "removeObserver"):
+            drive.removeObserver(self)
+
+        if hasattr(drive, "id") and drive.id in self._subscriptions:
+            self._subscriptions.remove(drive.id)
+
     
     def update(self, payload):
         if self.inbox is None:
