@@ -83,6 +83,16 @@ class Resident(User):
     def view_driver_stats(self, driverId):
         driver = Driver.query.get(driverId)
         return driver
+
+    def subscribe(self, drive):
+	    if not hasattr(self, "_subscriptions"):
+            self._subscriptions = set()
+       
+        if hasattr(drive, "registerObserver"):
+            drive.registerObserver(self)
+
+        if hasattr(drive, "id"):
+            self._subscriptions.add(drive.id)
     
     def update(self, payload):
         if self.inbox is None:
