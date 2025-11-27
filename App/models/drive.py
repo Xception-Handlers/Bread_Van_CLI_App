@@ -36,4 +36,14 @@ class Drive(db.Model):
             self._observers = []
 
         if resident not in self._observers:
-            self._observers.append(resident) 
+            self._observers.append(resident)
+
+    def notifyObservers(self, payload):
+       
+        if not hasattr(self, "_observers"):
+            return 
+
+        for observer in self._observers:
+            update_method = getattr(observer, "update", None)
+            if callable(update_method):
+                update_method(payload) 
