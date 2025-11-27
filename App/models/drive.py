@@ -30,3 +30,10 @@ class Drive(db.Model):
             'time': self.time.strftime("%H:%M:%S") if self.time else None,
             'status': self.status
         }
+    
+    def registerObserver(self, resident):
+        if not hasattr(self, "_observers"):
+            self._observers = []
+
+        if resident not in self._observers:
+            self._observers.append(resident) 
