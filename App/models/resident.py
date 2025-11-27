@@ -85,14 +85,15 @@ class Resident(User):
         return driver
 
     def subscribe(self, drive):
-	    if not hasattr(self, "_subscriptions"):
+        if not hasattr(self, "_subscriptions"):
             self._subscriptions = set()
-       
+
         if hasattr(drive, "registerObserver"):
             drive.registerObserver(self)
 
         if hasattr(drive, "id"):
             self._subscriptions.add(drive.id)
+
     
     def update(self, payload):
         if self.inbox is None:
