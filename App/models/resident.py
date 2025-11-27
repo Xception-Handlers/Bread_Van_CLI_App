@@ -88,4 +88,13 @@ class Resident(User):
         if self.inbox is None:
             self.inbox = []
 
+        for entry in self.inbox:
+            if "]: " in entry:
+                _, body = entry.split("]: ", 1)
+            else:
+                body = entry
+
+            if body == message_text:
+                return 
+            
         self.receive_notif(message_text)
