@@ -53,6 +53,39 @@ class Resident(User):
         except Exception:
             db.session.rollback()
             return None
+        
+    def request_stop_from_notification(self, notification):
+
+        if isinstance(notification, dict):
+            drive_id = notification.get("drive_id")
+            if drive_id is None:
+                raise ValueError("Notification payload has no 'drive_id'; cannot request stop.")
+            return self.request_stop(drive_id)
+
+        if isinstance(notification, int):
+            if self.inbox is None:
+                raise ValueError("Inbox is empty")
+            try:
+                notif_str = self.inbox[notification]
+            except (IndexError, TypeError):
+                raise ValueError("Invalid notification index")
+
+        elif isinstance(notification, str):
+            notif_str = notification
+        else:
+            raise TypeError("Unsupported notification type")
+
+        if "]: " in notif_str:
+            _, body = notif_str.split("]: ", 1)
+        else:
+            body = notif_str
+
+        match = re.search(r"Drive #(\d+)", body)
+        if not match:
+            raise ValueError("Notification does not contain a drive id in the form 'Drive #<id>'")
+
+        drive_id = int(match.group(1))
+        return self.request_stop(drive_id)
 
     def cancel_stop(self, stopId):
         stop = Stop.query.get(stopId)
