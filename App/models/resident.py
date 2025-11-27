@@ -88,6 +88,14 @@ class Resident(User):
         if self.inbox is None:
             self.inbox = []
 
+        drive_id = payload.get("drive_id")
+        base_message = (payload.get("message") or "").strip()
+
+        if drive_id is not None:
+            message_text = f"Drive #{drive_id}: {base_message}".strip()
+        else:
+            message_text = base_message
+
         for entry in self.inbox:
             if "]: " in entry:
                 _, body = entry.split("]: ", 1)
