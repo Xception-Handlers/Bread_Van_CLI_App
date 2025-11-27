@@ -76,6 +76,9 @@ class Resident(User):
 
     def view_inbox(self):
         return self.inbox
+    
+    def viewNotificationHistory(self):
+        return self.view_inbox()
 
     def view_driver_stats(self, driverId):
         driver = Driver.query.get(driverId)
