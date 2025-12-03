@@ -38,6 +38,13 @@ class Drive(db.Model):
         if resident not in self._observers:
             self._observers.append(resident)
 
+    def removeObserver(self, resident):
+        if not hasattr(self, "_observers"):
+            return 
+
+        if resident in self._observers:
+            self._observers.remove(resident)
+
     def notifyObservers(self, payload):
        
         if not hasattr(self, "_observers"):
