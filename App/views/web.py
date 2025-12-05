@@ -382,3 +382,114 @@ def driver_dashboard():
         stops_by_drive=stops_by_drive,
         stocks=stocks,
     )
+@web_views.route("/resident/dashboard", methods=["GET", "POST"])
+@jwt_required()
+def resident_dashboard():
+    uid = get_jwt_identity()
+    resident = get_user(uid)
+
+    if not resident or resident.type != "Resident":
+        flash("Unauthorized.", "error")
+        return redirect(url_for("web_views.login"))
+
+    if request.method == "POST":
+        action = request.form.get("action")
+
+        if action == "subscribe":
+            drive_id = request.form.get("drive_id", type=int)
+            if not drive_id:
+                flash("Could not find that drive.", "error")
+            else:
+                try:
+                    resident_request_stop(resident, drive_id)
+                    db.session.commit()
+                    flash("You have subscribed to this drive.", "success")
+                except ValueError as e:
+                    flash(str(e), "error")
+
+        elif action == "cancel_stop":
+            drive_id = request.form.get("drive_id", type=int)
+            if not drive_id:
+                flash("Could not find that drive to cancel.", "error")
+            else:
+                try:
+                    resident_cancel_stop(resident, drive_id)
+                    db.session.commit()
+                    flash("You have cancelled your stop request.", "success")
+                except ValueError as e:
+                    flash(str(e), "error")
+
+    area = Area.query.get(resident.areaId) if resident.areaId else None
+    street = Street.query.get(resident.streetId) if resident.streetId else None
+
+    inbox = resident_view_inbox(resident)
+
+    upcoming_drives = Drive.query.filter_by(
+        areaId=resident.areaId,
+        streetId=resident.streetId,
+        status="Upcoming"
+    ).all()
+
+    stops_for_resident = Stop.query.filter_by(residentId=resident.id).all()
+    resident_stops_by_drive = {s.driveId: s for s in stops_for_resident}
+
+    driver_menus = defaultdict(list)
+    if upcoming_drives:
+        driver_ids = {d.driverId for d in upcoming_drives if d.driverId}
+        if driver_ids:
+            stocks = DriverStock.query.filter(
+                DriverStock.driverId.in_(driver_ids)
+            ).all()
+            for s in stocks:
+                driver_menus[s.driverId].append(s)
+
+    return render_template(
+        "resident/dashboard.html",
+        resident=resident,
+        area=area,
+        street=street,
+        inbox=inbox,
+        upcoming_drives=upcoming_drives,
+        resident_stops_by_drive=resident_stops_by_drive,
+        driver_menus=driver_menus,
+    )
+
+@web_views.route("/driver/approve_stop/<int:stop_id>", methods=["POST"])
+@jwt_required()
+def approve_stop(stop_id):
+    uid = get_jwt_identity()
+    driver = get_user(uid)
+    if not driver or driver.type != "Driver":
+        flash("Unauthorized.", "error")
+        return redirect(url_for("web_views.login"))
+
+    eta = request.form.get("eta_text", "").strip()
+    status_msg = request.form.get("status_text", "").strip()
+
+    try:
+        driver_approve_stop(driver, stop_id, eta=eta, status_msg=status_msg)
+        flash("Stop approved.", "success")
+    except ValueError as e:
+        flash(str(e), "error")
+
+    return redirect(url_for("web_views.driver_dashboard"))
+
+
+@web_views.route("/driver/reject_stop/<int:stop_id>", methods=["POST"])
+@jwt_required()
+def reject_stop(stop_id):
+    uid = get_jwt_identity()
+    driver = get_user(uid)
+    if not driver or driver.type != "Driver":
+        flash("Unauthorized.", "error")
+        return redirect(url_for("web_views.login"))
+
+    reason = request.form.get("reason", "").strip()
+
+    try:
+        driver_reject_stop(driver, stop_id, reason=reason)
+        flash("Stop rejected.", "success")
+    except ValueError as e:
+        flash(str(e), "error")
+
+    return redirect(url_for("web_views.driver_dashboard"))
