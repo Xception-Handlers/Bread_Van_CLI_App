@@ -89,129 +89,178 @@ from App.controllers.driver import driver_schedule_drive
 from App.controllers.resident import resident_request_stop
 
 
+# def initialize():
+#     """
+#     Safe, idempotent initialization for Render / demo.
+
+#     - Ensures tables exist (create_db)
+#     - Creates admin user if missing
+#     - Seeds demo areas & streets if none
+#     - Seeds drivers & residents if missing
+#     - Optionally creates one demo Drive + Stop if there are no drives yet
+#     """
+#     # 1. Make sure all tables exist
+#     create_db()  # this should call db.create_all() inside
+
+#     # 2. Admin user
+#     admin = db.session.execute(
+#         db.select(User).filter_by(username="admin")
+#     ).scalar_one_or_none()
+#     if admin is None:
+#         admin = Admin(username="admin", password="adminpass")
+#         db.session.add(admin)
+#         db.session.commit()
+
+#     # 3. Areas & streets
+#     if Area.query.count() == 0:
+#         area1 = Area(name="St Augustine")
+#         area2 = Area(name="Tunapuna")
+#         area3 = Area(name="San Juan")
+#         db.session.add_all([area1, area2, area3])
+#         db.session.flush()  # get IDs without full commit yet
+
+#         # IMPORTANT: keep street names ≤ 20 chars (your Postgres column limit)
+#         streets = [
+#             Street(name="Gordon Street", areaId=area1.id),
+#             Street(name="Warner Street", areaId=area1.id),
+#             Street(name="College Road", areaId=area1.id),
+#             Street(name="Fairly Street", areaId=area2.id),
+#             Street(name="St John Road", areaId=area2.id),
+#         ]
+#         db.session.add_all(streets)
+#         db.session.commit()
+
+#     # get references even if they already existed
+#     area1 = Area.query.filter_by(name="St Augustine").first()
+#     area2 = Area.query.filter_by(name="Tunapuna").first()
+#     # we only really need some specific streets:
+#     gordon = Street.query.filter_by(name="Gordon Street").first()
+#     warner = Street.query.filter_by(name="Warner Street").first()
+#     fairly = Street.query.filter_by(name="Fairly Street").first()
+
+#     # 4. Drivers
+#     bob = db.session.execute(
+#         db.select(User).filter_by(username="bob")
+#     ).scalar_one_or_none()
+#     if bob is None:
+#         driver1 = Driver(
+#             username="bob",
+#             password="bobpass",
+#             status="Offline",
+#             areaId=area1.id if area1 else None,
+#             streetId=gordon.id if gordon else None,
+#         )
+#         driver2 = Driver(
+#             username="mary",
+#             password="marypass",
+#             status="Available",
+#             areaId=area2.id if area2 else None,
+#             streetId=None,
+#         )
+#         db.session.add_all([driver1, driver2])
+#         db.session.commit()
+
+#     # refresh driver references
+#     driver1 = Driver.query.join(User).filter(User.username == "bob").first()
+#     driver2 = Driver.query.join(User).filter(User.username == "mary").first()
+
+#     # 5. Residents
+#     alice = db.session.execute(
+#         db.select(User).filter_by(username="alice")
+#     ).scalar_one_or_none()
+
+#     if alice is None:
+#         resident1 = Resident(
+#             username="alice",
+#             password="alicepass",
+#             areaId=area1.id if area1 else None,
+#             streetId=warner.id if warner else None,
+#             houseNumber=48,
+#         )
+#         resident2 = Resident(
+#             username="jane",
+#             password="janepass",
+#             areaId=area1.id if area1 else None,
+#             streetId=warner.id if warner else None,
+#             houseNumber=50,
+#         )
+#         resident3 = Resident(
+#             username="john",
+#             password="johnpass",
+#             areaId=area2.id if area2 else None,
+#             streetId=fairly.id if fairly else None,
+#             houseNumber=13,
+#         )
+#         db.session.add_all([resident1, resident2, resident3])
+#         db.session.commit()
+
+#     resident2 = Resident.query.join(User).filter(User.username == "jane").first()
+
+#     # 6. Optional: create ONE demo drive + stop if database has no drives yet
+#     if Drive.query.count() == 0 and driver2 and area1 and warner and resident2:
+#         future_date = (datetime.utcnow() + timedelta(days=1)).strftime("%Y-%m-%d")
+
+#         # use your controller function so the status fields, etc. are correct
+#         new_drive = driver_schedule_drive(
+#             driver2,
+#             area1.id,
+#             warner.id,
+#             future_date,
+#             "10:00",
+#         )
+
+#         # NOTE: we use the real drive id here, NOT 0
+#         resident_request_stop(resident2, new_drive.id)
+#         db.session.commit()
+
 def initialize():
     """
-    Safe, idempotent initialization for Render / demo.
+    Safe, idempotent initializer.
 
     - Ensures tables exist (create_db)
-    - Creates admin user if missing
-    - Seeds demo areas & streets if none
-    - Seeds drivers & residents if missing
-    - Optionally creates one demo Drive + Stop if there are no drives yet
+    - Creates default admin if missing
+    - Creates some Areas and Streets if none exist
     """
-    # 1. Make sure all tables exist
-    create_db()  # this should call db.create_all() inside
+    app = current_app
+    app.logger.info("Running initialize()")
 
-    # 2. Admin user
-    admin = db.session.execute(
-        db.select(User).filter_by(username="admin")
-    ).scalar_one_or_none()
-    if admin is None:
+    # 1. Ensure tables exist
+    create_db()
+
+    # 2. Default admin
+    admin = Admin.query.filter_by(username="admin").first()
+    if not admin:
+        app.logger.info("Creating default admin user 'admin'")
         admin = Admin(username="admin", password="adminpass")
         db.session.add(admin)
         db.session.commit()
 
-    # 3. Areas & streets
+    # 3. Areas & streets (only if no areas)
     if Area.query.count() == 0:
-        area1 = Area(name="St Augustine")
-        area2 = Area(name="Tunapuna")
-        area3 = Area(name="San Juan")
-        db.session.add_all([area1, area2, area3])
-        db.session.flush()  # get IDs without full commit yet
+        app.logger.info("Seeding default areas & streets")
 
-        # IMPORTANT: keep street names ≤ 20 chars (your Postgres column limit)
+        # Areas
+        st_aug = Area(name="St. Augustine")
+        tunapuna = Area(name="Tunapuna")
+        san_juan = Area(name="San Juan")
+
+        db.session.add_all([st_aug, tunapuna, san_juan])
+        db.session.flush()  # get IDs without committing yet
+
+        # Streets
         streets = [
-            Street(name="Gordon Street", areaId=area1.id),
-            Street(name="Warner Street", areaId=area1.id),
-            Street(name="College Road", areaId=area1.id),
-            Street(name="Fairly Street", areaId=area2.id),
-            Street(name="St John Road", areaId=area2.id),
+            Street(name="Gordon Street", areaId=st_aug.id),
+            Street(name="Warner Street", areaId=st_aug.id),
+            Street(name="College Road", areaId=st_aug.id),
+
+            Street(name="Fairly Street", areaId=tunapuna.id),
+            Street(name="Saint John Road", areaId=tunapuna.id),
         ]
+
         db.session.add_all(streets)
         db.session.commit()
 
-    # get references even if they already existed
-    area1 = Area.query.filter_by(name="St Augustine").first()
-    area2 = Area.query.filter_by(name="Tunapuna").first()
-    # we only really need some specific streets:
-    gordon = Street.query.filter_by(name="Gordon Street").first()
-    warner = Street.query.filter_by(name="Warner Street").first()
-    fairly = Street.query.filter_by(name="Fairly Street").first()
-
-    # 4. Drivers
-    bob = db.session.execute(
-        db.select(User).filter_by(username="bob")
-    ).scalar_one_or_none()
-    if bob is None:
-        driver1 = Driver(
-            username="bob",
-            password="bobpass",
-            status="Offline",
-            areaId=area1.id if area1 else None,
-            streetId=gordon.id if gordon else None,
-        )
-        driver2 = Driver(
-            username="mary",
-            password="marypass",
-            status="Available",
-            areaId=area2.id if area2 else None,
-            streetId=None,
-        )
-        db.session.add_all([driver1, driver2])
-        db.session.commit()
-
-    # refresh driver references
-    driver1 = Driver.query.join(User).filter(User.username == "bob").first()
-    driver2 = Driver.query.join(User).filter(User.username == "mary").first()
-
-    # 5. Residents
-    alice = db.session.execute(
-        db.select(User).filter_by(username="alice")
-    ).scalar_one_or_none()
-
-    if alice is None:
-        resident1 = Resident(
-            username="alice",
-            password="alicepass",
-            areaId=area1.id if area1 else None,
-            streetId=warner.id if warner else None,
-            houseNumber=48,
-        )
-        resident2 = Resident(
-            username="jane",
-            password="janepass",
-            areaId=area1.id if area1 else None,
-            streetId=warner.id if warner else None,
-            houseNumber=50,
-        )
-        resident3 = Resident(
-            username="john",
-            password="johnpass",
-            areaId=area2.id if area2 else None,
-            streetId=fairly.id if fairly else None,
-            houseNumber=13,
-        )
-        db.session.add_all([resident1, resident2, resident3])
-        db.session.commit()
-
-    resident2 = Resident.query.join(User).filter(User.username == "jane").first()
-
-    # 6. Optional: create ONE demo drive + stop if database has no drives yet
-    if Drive.query.count() == 0 and driver2 and area1 and warner and resident2:
-        future_date = (datetime.utcnow() + timedelta(days=1)).strftime("%Y-%m-%d")
-
-        # use your controller function so the status fields, etc. are correct
-        new_drive = driver_schedule_drive(
-            driver2,
-            area1.id,
-            warner.id,
-            future_date,
-            "10:00",
-        )
-
-        # NOTE: we use the real drive id here, NOT 0
-        resident_request_stop(resident2, new_drive.id)
-        db.session.commit()
+    app.logger.info("initialize() completed successfully")
 
 def seed_demo_areas_and_streets():
     """
