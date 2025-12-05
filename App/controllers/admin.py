@@ -7,7 +7,7 @@ def admin_create_driver(username, password):
     existing_user = Admin.query.filter_by(username=username).first()
     if existing_user:
         raise ValueError("Username already taken.")
-    driver = Driver(username=username, password=password, status="Offline", areaId=None, streetId=None)
+    driver = Driver(username=username, password=password, status="Offline", areaId=0, streetId=None)
     db.session.add(driver)
     db.session.commit()
     return driver
