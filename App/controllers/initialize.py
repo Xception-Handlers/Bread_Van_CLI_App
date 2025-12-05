@@ -85,13 +85,13 @@ def seed_demo_areas_and_streets():
     default_data = {
         "St. Augustine": [
             "Agostini Street",
-            "St Augustine Circular",
+            "St Augustine Circ.",
             "Evans Street",
         ],
         "Curepe": [
             "Southern Main Road",
             "Cipriani Street",
-            "Evans Street Extension",
+            "Evans Street Ext.",
         ],
         "Sangre Grande": [
             "Picton Road",
