@@ -24,7 +24,11 @@ class Resident(User):
 
     area = db.relationship("Area", backref='residents')
     street = db.relationship("Street", backref='residents')
-    stops = db.relationship('Stop', backref='resident')
+    stops = db.relationship(
+        'Stop',
+        back_populates='resident',
+        lazy='dynamic'  
+    )
 
     __mapper_args__ = {
         "polymorphic_identity": "Resident",
