@@ -68,6 +68,43 @@ def add_views(app):
 #     app.app_context().push()
 #     return app
 
+# def create_app(overrides={}):
+#     app = Flask(__name__, static_url_path='/static')
+#     load_config(app, overrides)
+#     CORS(app)
+#     add_auth_context(app)
+
+#     photos = UploadSet('photos', TEXT + DOCUMENTS + IMAGES)
+#     configure_uploads(app, photos)
+
+#     add_views(app)
+#     init_db(app)
+#     jwt = setup_jwt(app)
+#     setup_admin(app)
+#     register_error_handlers(app)
+
+#     @jwt.invalid_token_loader
+#     @jwt.unauthorized_loader
+#     def custom_unauthorized_response(error):
+#         return render_template('401.html', error=error), 401
+
+#     app.app_context().push()
+
+#     # ---------- SAFE AUTO-INIT FOR RENDER ----------
+#     import os
+#     from sqlalchemy.exc import ProgrammingError, OperationalError
+#     from App.controllers.initialize import initialize
+
+#     if os.getenv("BREADVAN_AUTO_INIT") == "1":
+#         try:
+#             # initialize() should call create_db() / create_all() and seed admin + areas/streets
+#             initialize()
+#         except (ProgrammingError, OperationalError) as e:
+#             app.logger.error(f"Auto-init failed: {e}")
+#     # ----------------------------------------------
+
+#     return app
+
 def create_app(overrides={}):
     app = Flask(__name__, static_url_path='/static')
     load_config(app, overrides)
@@ -90,20 +127,16 @@ def create_app(overrides={}):
 
     app.app_context().push()
 
-    if not app.config.get("TESTING", False):
-        auto_flag = os.getenv("BREADVAN_AUTO_INIT")
-        if auto_flag == "1":
-            try:
-               
-                if Area.query.count() == 0:
-                    initialize()
-                
-                elif Street.query.count() == 0:
-                    seed_demo_areas_and_streets()
+    # ---------- SAFE AUTO-INIT FOR RENDER ----------
+    import os
+    from sqlalchemy.exc import ProgrammingError, OperationalError
+    from App.controllers.initialize import initialize
 
-                db.session.commit()
-            except Exception as e:
-                db.session.rollback()
-                current_app.logger.exception("Auto-init failed: %s", e)
+    if os.getenv("BREADVAN_AUTO_INIT") == "1":
+        try:
+            initialize()
+        except (ProgrammingError, OperationalError) as e:
+            app.logger.error(f"Auto-init failed: {e}")
+    # ----------------------------------------------
 
     return app
