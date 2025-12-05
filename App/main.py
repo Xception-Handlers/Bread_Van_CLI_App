@@ -46,22 +46,55 @@ def add_views(app):
         app.register_blueprint(view)
     # API views live under App/views and are registered above
 
+# def create_app(overrides={}):
+#     app = Flask(__name__, static_url_path='/static')
+#     load_config(app, overrides)
+#     CORS(app)
+#     add_auth_context(app)
+#     photos = UploadSet('photos', TEXT + DOCUMENTS + IMAGES)
+#     configure_uploads(app, photos)
+#     add_views(app)
+#     init_db(app)
+#     jwt = setup_jwt(app)
+#     setup_admin(app)
+#     register_error_handlers(app)
+#     @jwt.invalid_token_loader
+#     @jwt.unauthorized_loader
+#     def custom_unauthorized_response(error):
+#         return render_template('401.html', error=error), 401
+#     app.app_context().push()
+#     return app
+
 def create_app(overrides={}):
     app = Flask(__name__, static_url_path='/static')
     load_config(app, overrides)
     CORS(app)
     add_auth_context(app)
+
     photos = UploadSet('photos', TEXT + DOCUMENTS + IMAGES)
     configure_uploads(app, photos)
+
     add_views(app)
     init_db(app)
     jwt = setup_jwt(app)
     setup_admin(app)
     register_error_handlers(app)
+
     @jwt.invalid_token_loader
     @jwt.unauthorized_loader
     def custom_unauthorized_response(error):
         return render_template('401.html', error=error), 401
-    app.app_context().push()
-    return app
 
+    app.app_context().push()
+
+    # 🔸 Only auto-initialize when explicitly told to (e.g. Render)
+    from App.models import Area
+    from App.controllers.initialize import initialize
+    import os
+
+    if os.getenv("BREADVAN_AUTO_INIT") == "1":
+        # Only if DB is still empty – avoids wiping real data
+        if Area.query.count() == 0:
+            initialize()
+
+    return app
