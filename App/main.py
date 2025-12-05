@@ -46,66 +46,22 @@ def add_views(app):
         app.register_blueprint(view)
     # API views live under App/views and are registered above
 
-# def create_app(overrides={}):
-#     app = Flask(__name__, static_url_path='/static')
-#     load_config(app, overrides)
-#     CORS(app)
-#     add_auth_context(app)
-#     photos = UploadSet('photos', TEXT + DOCUMENTS + IMAGES)
-#     configure_uploads(app, photos)
-#     add_views(app)
-#     init_db(app)
-#     jwt = setup_jwt(app)
-#     setup_admin(app)
-#     register_error_handlers(app)
-#     @jwt.invalid_token_loader
-#     @jwt.unauthorized_loader
-#     def custom_unauthorized_response(error):
-#         return render_template('401.html', error=error), 401
-#     app.app_context().push()
-#     return app
-
 def create_app(overrides={}):
     app = Flask(__name__, static_url_path='/static')
     load_config(app, overrides)
     CORS(app)
     add_auth_context(app)
-
     photos = UploadSet('photos', TEXT + DOCUMENTS + IMAGES)
     configure_uploads(app, photos)
-
     add_views(app)
     init_db(app)
-
-    # 🔹 make sure Flask-Migrate is bound (if you use it elsewhere)
-    get_migrate(app)
-
     jwt = setup_jwt(app)
     setup_admin(app)
     register_error_handlers(app)
-
     @jwt.invalid_token_loader
     @jwt.unauthorized_loader
     def custom_unauthorized_response(error):
         return render_template('401.html', error=error), 401
-
-    # 🔹 IMPORTANT: run migrations + seed admin on startup
-    with app.app_context():
-        try:
-            upgrade()  # apply migrations to the current DB (Postgres on Render)
-        except Exception as e:
-            app.logger.error(f"Migration/upgrade failed: {e}")
-
-        # seed default admin user if missing
-        existing = User.query.filter_by(username="admin").first()
-        if not existing:
-            try:
-                new_admin = Admin(username="admin", password="adminpass")
-                db.session.add(new_admin)
-                db.session.commit()
-                app.logger.info("Seeded default admin user 'admin'.")
-            except Exception as e:
-                app.logger.error(f"Failed to seed admin user: {e}")
-
+    app.app_context().push()
     return app
 
