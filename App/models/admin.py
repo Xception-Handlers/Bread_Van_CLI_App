@@ -24,7 +24,7 @@ class Admin(User):
         driver = Driver(username=username,
                          password=password,
                          status="Offline",
-                         areaId=0,
+                         areaId=None,
                          streetId=None)
         db.session.add(driver)
         db.session.commit()
