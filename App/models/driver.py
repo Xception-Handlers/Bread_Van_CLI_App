@@ -6,7 +6,7 @@ from .street import Street
 
 
 class Driver(User):
-    _tablename_ = "driver"
+    __tablename__ = "driver"
 
     id = db.Column(db.Integer, db.ForeignKey('user.id'), primary_key=True)
     status = db.Column(db.String(20), nullable=False)
@@ -16,12 +16,12 @@ class Driver(User):
     area = db.relationship("Area", backref="drivers")
     street = db.relationship("Street", backref="drivers")
 
-    _mapper_args_ = {
+    __mapper_args__ = {
         "polymorphic_identity": "Driver",
     }
 
-    def _init_(self, username, password, status, areaId, streetId):
-        super()._init_(username, password)
+    def __init__(self, username, password, status, areaId, streetId):
+        super().__init__(username, password)
         self.status = status
         self.areaId = areaId
         self.streetId = streetId
@@ -120,3 +120,5 @@ class Driver(User):
         if drive:
             return drive.stops
         return None
+    
+
