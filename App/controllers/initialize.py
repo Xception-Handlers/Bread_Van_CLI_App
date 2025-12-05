@@ -90,19 +90,9 @@ from App.controllers.resident import resident_request_stop
 
 
 # def initialize():
-#     """
-#     Safe, idempotent initialization for Render / demo.
-
-#     - Ensures tables exist (create_db)
-#     - Creates admin user if missing
-#     - Seeds demo areas & streets if none
-#     - Seeds drivers & residents if missing
-#     - Optionally creates one demo Drive + Stop if there are no drives yet
-#     """
-#     # 1. Make sure all tables exist
+#   
 #     create_db()  # this should call db.create_all() inside
 
-#     # 2. Admin user
 #     admin = db.session.execute(
 #         db.select(User).filter_by(username="admin")
 #     ).scalar_one_or_none()
@@ -111,7 +101,7 @@ from App.controllers.resident import resident_request_stop
 #         db.session.add(admin)
 #         db.session.commit()
 
-#     # 3. Areas & streets
+# 
 #     if Area.query.count() == 0:
 #         area1 = Area(name="St Augustine")
 #         area2 = Area(name="Tunapuna")
@@ -119,7 +109,7 @@ from App.controllers.resident import resident_request_stop
 #         db.session.add_all([area1, area2, area3])
 #         db.session.flush()  # get IDs without full commit yet
 
-#         # IMPORTANT: keep street names ≤ 20 chars (your Postgres column limit)
+#         
 #         streets = [
 #             Street(name="Gordon Street", areaId=area1.id),
 #             Street(name="Warner Street", areaId=area1.id),
@@ -130,15 +120,15 @@ from App.controllers.resident import resident_request_stop
 #         db.session.add_all(streets)
 #         db.session.commit()
 
-#     # get references even if they already existed
+#     
 #     area1 = Area.query.filter_by(name="St Augustine").first()
 #     area2 = Area.query.filter_by(name="Tunapuna").first()
-#     # we only really need some specific streets:
+#    
 #     gordon = Street.query.filter_by(name="Gordon Street").first()
 #     warner = Street.query.filter_by(name="Warner Street").first()
 #     fairly = Street.query.filter_by(name="Fairly Street").first()
 
-#     # 4. Drivers
+#    
 #     bob = db.session.execute(
 #         db.select(User).filter_by(username="bob")
 #     ).scalar_one_or_none()
@@ -160,11 +150,11 @@ from App.controllers.resident import resident_request_stop
 #         db.session.add_all([driver1, driver2])
 #         db.session.commit()
 
-#     # refresh driver references
+#  
 #     driver1 = Driver.query.join(User).filter(User.username == "bob").first()
 #     driver2 = Driver.query.join(User).filter(User.username == "mary").first()
 
-#     # 5. Residents
+#     
 #     alice = db.session.execute(
 #         db.select(User).filter_by(username="alice")
 #     ).scalar_one_or_none()
@@ -196,11 +186,11 @@ from App.controllers.resident import resident_request_stop
 
 #     resident2 = Resident.query.join(User).filter(User.username == "jane").first()
 
-#     # 6. Optional: create ONE demo drive + stop if database has no drives yet
+#  
 #     if Drive.query.count() == 0 and driver2 and area1 and warner and resident2:
 #         future_date = (datetime.utcnow() + timedelta(days=1)).strftime("%Y-%m-%d")
 
-#         # use your controller function so the status fields, etc. are correct
+#         
 #         new_drive = driver_schedule_drive(
 #             driver2,
 #             area1.id,
@@ -209,25 +199,18 @@ from App.controllers.resident import resident_request_stop
 #             "10:00",
 #         )
 
-#         # NOTE: we use the real drive id here, NOT 0
 #         resident_request_stop(resident2, new_drive.id)
 #         db.session.commit()
 
 def initialize():
-    """
-    Safe, idempotent initializer.
-
-    - Ensures tables exist (create_db)
-    - Creates default admin if missing
-    - Creates some Areas and Streets if none exist
-    """
+   
     app = current_app
     app.logger.info("Running initialize()")
 
-    # 1. Ensure tables exist
+   
     create_db()
 
-    # 2. Default admin
+   
     admin = Admin.query.filter_by(username="admin").first()
     if not admin:
         app.logger.info("Creating default admin user 'admin'")
@@ -235,19 +218,19 @@ def initialize():
         db.session.add(admin)
         db.session.commit()
 
-    # 3. Areas & streets (only if no areas)
+    
     if Area.query.count() == 0:
         app.logger.info("Seeding default areas & streets")
 
-        # Areas
+        
         st_aug = Area(name="St. Augustine")
         tunapuna = Area(name="Tunapuna")
         san_juan = Area(name="San Juan")
 
         db.session.add_all([st_aug, tunapuna, san_juan])
-        db.session.flush()  # get IDs without committing yet
+        db.session.flush()  
 
-        # Streets
+       
         streets = [
             Street(name="Gordon Street", areaId=st_aug.id),
             Street(name="Warner Street", areaId=st_aug.id),
@@ -263,23 +246,19 @@ def initialize():
     app.logger.info("initialize() completed successfully")
 
 def seed_demo_areas_and_streets():
-    """
-    Idempotent demo data seeding for Areas and Streets.
-    Safe for Postgres; rolls back on any error so the session is never left dirty.
-    """
-    # Optionally allow skipping via env var if you ever need to
+    
     if os.getenv("SKIP_DEMO_SEED") == "1":
         current_app.logger.info("Skipping demo area/street seed via SKIP_DEMO_SEED")
         return
 
     try:
-        # --- AREAS ---
+        
         demo_areas = [
             "Unassigned",
             "Curepe/St Aug",
             "San Juan",
             "Sangre Grande",
-            # etc – keep names within your column lengths
+            
         ]
 
         name_to_area = {}
@@ -291,20 +270,20 @@ def seed_demo_areas_and_streets():
                 db.session.add(area)
             name_to_area[name] = area
 
-        db.session.flush()  # get IDs for new Areas
+        db.session.flush()
 
-        # --- STREETS ---
+        
         demo_streets = [
             ("Main Road", "Curepe/St Aug"),
-            ("St Aug Circ", "Curepe/St Aug"),   # <= 20 chars
+            ("St Aug Circ", "Curepe/St Aug"),  
             ("High St", "San Juan"),
-            # etc – ALL names <= 20 chars
+           
         ]
 
         for street_name, area_name in demo_streets:
             area = name_to_area.get(area_name)
             if not area:
-                continue  # or raise/log if you prefer
+                continue  
 
             exists = Street.query.filter_by(
                 name=street_name,
