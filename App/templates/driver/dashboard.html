@@ -1,0 +1,292 @@
+{% extends "layout.html" %}
+{% block title %}Driver Dashboard{% endblock %}
+
+{% block content %}
+<h4>Driver Dashboard</h4>
+
+<div class="row">
+  <!-- Driver info card -->
+  <div class="col s12 m6">
+    <div class="card">
+      <div class="card-content">
+        <span class="card-title">
+          {{ driver.username }}
+          {% if driver.status %} ({{ driver.status }}){% endif %}
+        </span>
+        <p>
+          <strong>Current Location:</strong><br>
+          Area:
+          {% if driver.area %}
+            {{ driver.area.name }}
+          {% elif driver.areaId %}
+            #{{ driver.areaId }}
+          {% else %}
+            Not set
+          {% endif %}
+          <br>
+          Street:
+          {% if driver.street %}
+            {{ driver.street.name }}
+          {% elif driver.streetId %}
+            #{{ driver.streetId }}
+          {% else %}
+            Not set
+          {% endif %}
+        </p>
+      </div>
+    </div>
+  </div>
+
+
+
+  <!-- Schedule drive form -->
+  <div class="col s12 m6">
+    <div class="card">
+      <div class="card-content">
+        <span class="card-title">Schedule a New Drive</span>
+
+        <form method="POST" action="{{ url_for('web_views.driver_dashboard') }}">
+          <input type="hidden" name="action" value="schedule_drive">
+
+          <div class="input-field">
+            <input id="date_str" type="date" name="date_str" required>
+            <label for="date_str" class="active">Date</label>
+          </div>
+
+          <div class="input-field">
+            <input id="time_str" type="time" name="time_str" required>
+            <label for="time_str" class="active">Time (ETA)</label>
+          </div>
+
+          <div class="input-field">
+            <select name="area_id" id="area_id" required>
+              <option value="" disabled selected>Choose area</option>
+              {% for area in areas %}
+                <option value="{{ area.id }}">{{ area.name }}</option>
+              {% endfor %}
+            </select>
+            <label for="area_id">Area</label>
+          </div>
+
+          <div class="input-field">
+            <select name="street_id" id="street_id" required>
+              <option value="" disabled selected>Choose street</option>
+              {% for street in streets %}
+                <option value="{{ street.id }}">
+                  {{ street.name }}
+                  {% if street.area %} ({{ street.area.name }}){% endif %}
+                </option>
+              {% endfor %}
+            </select>
+            <label for="street_id">Street</label>
+          </div>
+
+          <button class="btn teal waves-effect waves-light" type="submit">
+            Schedule Drive
+          </button>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+  
+
+<!-- Bakery menu / stock -->
+<h5>Your Bakery Menu</h5>
+
+<div class="row">
+  <div class="col s12">
+    <div class="card">
+      <div class="card-content">
+        <span class="card-title">Current Stock</span>
+
+        {% if stocks %}
+          <table class="striped responsive-table">
+            <thead>
+              <tr>
+                <th>Item</th>
+                <th>Quantity</th>
+                <th>Price (TTD)</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for s in stocks %}
+                <tr>
+                  <td>{{ s.item.name }}</td>
+                  <td>{{ s.quantity }}</td>
+                  <td>{{ "%.2f"|format(s.item.price) }}</td>
+                  <td>
+                    <!-- Simple delete button -->
+                    <form method="POST"
+                          action="{{ url_for('web_views.driver_dashboard') }}"
+                          style="display:inline;">
+                      <input type="hidden" name="action" value="delete_stock">
+                      <input type="hidden" name="stock_id" value="{{ s.id }}">
+                      <button type="submit" class="btn-small red lighten-1">
+                        Delete
+                      </button>
+                    </form>
+                  </td>
+                </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        {% else %}
+          <p>You have no items in your menu yet.</p>
+        {% endif %}
+      </div>
+
+      <div class="card-action">
+        <form method="POST" action="{{ url_for('web_views.driver_dashboard') }}" class="row">
+          <input type="hidden" name="action" value="add_stock">
+
+          <div class="input-field col s4">
+            <input type="text" id="item_name" name="item_name" required>
+            <label for="item_name">Item</label>
+          </div>
+
+          <div class="input-field col s3">
+            <input type="number" id="item_quantity" name="item_quantity" min="0" required>
+            <label for="item_quantity">Quantity</label>
+          </div>
+
+          <div class="input-field col s3">
+            <input type="number" id="item_price" name="item_price" step="0.01" min="0">
+            <label for="item_price">Price (TTD)</label>
+          </div>
+
+          <div class="input-field col s2" style="margin-top: 20px;">
+            <button class="btn-small teal" type="submit">Add</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+
+<h5>Upcoming / In-Progress Drives</h5>
+
+{% if drives %}
+  <table class="striped responsive-table">
+    <thead>
+      <tr>
+        <th>#</th>
+        <th>Date</th>
+        <th>ETA</th>
+        <th>Area</th>
+        <th>Street</th>
+        <th>Status</th>
+        <th>Subscribed Residents</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for drive in drives %}
+        <tr>
+          <!-- Local numbering: 1,2,3,... per driver -->
+          <td>{{ loop.index }}</td>
+          <td>
+            {% if drive.date %}
+              {{ drive.date.strftime("%Y-%m-%d") }}
+            {% else %}
+              -
+            {% endif %}
+          </td>
+          <td>
+            {% if drive.time %}
+              {{ drive.time.strftime("%H:%M") }}
+            {% else %}
+              -
+            {% endif %}
+          </td>
+          <td>
+            {% if drive.area %}
+              {{ drive.area.name }}
+            {% else %}
+              #{{ drive.areaId }}
+            {% endif %}
+          </td>
+          <td>
+            {% if drive.street %}
+              {{ drive.street.name }}
+            {% else %}
+              #{{ drive.streetId }}
+            {% endif %}
+          </td>
+          <td>{{ drive.status }}</td>
+          <td>
+            {% set stops_for_drive = stops_by_drive.get(drive.id, []) %}
+            {% if stops_for_drive %}
+              <ul class="collection">
+                {% for stop in stops_for_drive %}
+                  <li class="collection-item">
+                    <strong>{{ stop.resident.username }}</strong><br>
+                    {{ stop.resident.street.name }}, {{ stop.resident.area.name }},
+                    #{{ stop.resident.houseNumber }}<br>
+                    <em>Status: {{ stop.status }}</em>
+
+                    {% if stop.status == "Pending" %}
+                      <div style="margin-top: 8px;">
+                        <form method="POST" action="{{ url_for('web_views.driver_dashboard') }}"
+                              style="display:inline;">
+                          <input type="hidden" name="action" value="approve_stop">
+                          <input type="hidden" name="stop_id" value="{{ stop.id }}">
+                          <button class="btn-small green" type="submit">Approve</button>
+                        </form>
+
+                        <form method="POST" action="{{ url_for('web_views.driver_dashboard') }}"
+                              style="display:inline; margin-left: 4px;">
+                          <input type="hidden" name="action" value="reject_stop">
+                          <input type="hidden" name="stop_id" value="{{ stop.id }}">
+                          <button class="btn-small red" type="submit">Reject</button>
+                        </form>
+                      </div>
+                    {% elif stop.status == "Approved" %}
+                      <!-- ETA / status form only for approved stops -->
+                      <form method="POST"
+                            action="{{ url_for('web_views.driver_dashboard') }}"
+                            style="margin-top: 8px;">
+                        <input type="hidden" name="action" value="send_update">
+                        <input type="hidden" name="resident_id" value="{{ stop.resident.id }}">
+                        <input type="hidden" name="drive_id" value="{{ drive.id }}">
+
+                        <div class="input-field" style="margin-bottom: 6px;">
+                          <input type="text" name="eta_text" placeholder="ETA (e.g. 15 mins)">
+                        </div>
+                        <div class="input-field" style="margin-bottom: 6px;">
+                          <input type="text" name="status_text" placeholder="Status (e.g. On my way)">
+                        </div>
+
+                        <button class="btn-small waves-effect waves-light teal" type="submit">
+                          Send Update
+                        </button>
+                      </form>
+                    {% endif %}
+                  </li>
+                {% endfor %}
+              </ul>
+            {% else %}
+              <em>No residents subscribed yet.</em>
+            {% endif %}
+          </td>
+        </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+{% else %}
+  <p>You have no drives scheduled yet.</p>
+{% endif %}
+{% endblock %}
+
+{% block scripts %}
+  {{ super() }}
+  <script>
+    document.addEventListener('DOMContentLoaded', function() {
+      var elems = document.querySelectorAll('select');
+      M.FormSelect.init(elems);
+
+      var modals = document.querySelectorAll('.modal');
+      M.Modal.init(modals);
+    });
+  </script>
+{% endblock %}
