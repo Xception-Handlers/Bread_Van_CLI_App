@@ -46,13 +46,33 @@ from App.controllers.user import (
 app = create_app()
 migrate = get_migrate(app)
 
-with app.app_context():
+# with app.app_context():
+#     upgrade()
+#     existing = db.session.query(User).filter_by(username='admin').first()
+#     if not existing:
+#         new_admin = Admin(username='admin', password='adminpass')
+#         db.session.add(new_admin)
+#         db.session.commit()
+
+@app.cli.command("migrate-upgrade", help="Run database migrations (flask-migrate upgrade)")
+@with_appcontext
+def migrate_upgrade_command():
+    """Apply all migrations to the database."""
     upgrade()
+    click.echo("Database migrations applied.")
+
+
+@app.cli.command("seed-admin", help="Create default admin user if not exists")
+@with_appcontext
+def seed_admin_command():
     existing = db.session.query(User).filter_by(username='admin').first()
     if not existing:
         new_admin = Admin(username='admin', password='adminpass')
         db.session.add(new_admin)
         db.session.commit()
+        click.echo("Default admin user 'admin' created.")
+    else:
+        click.echo("Admin user already exists.")
 
 
 # Initialisation
@@ -246,15 +266,32 @@ def delete_area_command(area_id):
         print(str(e))
 
 
+# @admin_cli.command("delete_street", help="Delete a street")
+# @click.argument("street_id", type=int)
+# def delete_street_command(street_id):
+#     admin = require_admin()
+#     if not admin:
+#         return
+#     try:
+#         street = admin_delete_street(street_id)
+#         print(f"Street '{street.name}' deleted.")
+#     except ValueError as e:
+#         print(str(e))
 @admin_cli.command("delete_street", help="Delete a street")
 @click.argument("street_id", type=int)
 def delete_street_command(street_id):
     admin = require_admin()
     if not admin:
         return
+
+    street = Street.query.get(street_id)
+    if not street:
+        print("Invalid street ID.")
+        return
+
     try:
-        street = admin_delete_street(street_id)
-        print(f"Street '{street.name}' deleted.")
+        deleted = admin_delete_street(street.areaId, street_id)
+        print(f"Street '{deleted.name}' deleted.")
     except ValueError as e:
         print(str(e))
 
