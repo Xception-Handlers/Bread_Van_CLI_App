@@ -18,11 +18,14 @@
 # from App.views import views, setup_admin
 
 import os
-from flask import Flask, render_template
+from flask import Flask, render_template, current_app
 from flask_uploads import DOCUMENTS, IMAGES, TEXT, UploadSet, configure_uploads
 from flask_cors import CORS
 from werkzeug.utils import secure_filename
 from werkzeug.datastructures import FileStorage
+from App.models import Area, Street
+from App.controllers.initialize import initialize, seed_demo_areas_and_streets
+
 
 from App.database import init_db, db, get_migrate
 from App.config import load_config
@@ -87,14 +90,20 @@ def create_app(overrides={}):
 
     app.app_context().push()
 
-    import os
-    from App.models import Area, Street
-    from App.controllers.initialize import initialize, seed_demo_areas_and_streets
+    if not app.config.get("TESTING", False):
+        auto_flag = os.getenv("BREADVAN_AUTO_INIT")
+        if auto_flag == "1":
+            try:
+               
+                if Area.query.count() == 0:
+                    initialize()
+                
+                elif Street.query.count() == 0:
+                    seed_demo_areas_and_streets()
 
-    if os.getenv("BREADVAN_AUTO_INIT") == "1":
-        if Area.query.count() == 0:
-            initialize()
-        elif Street.query.count() == 0:
-            seed_demo_areas_and_streets()
+                db.session.commit()
+            except Exception as e:
+                db.session.rollback()
+                current_app.logger.exception("Auto-init failed: %s", e)
 
     return app

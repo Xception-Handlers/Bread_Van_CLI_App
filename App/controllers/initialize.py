@@ -1,6 +1,7 @@
+import os
 from App.database import db
 from App.models import Admin, Driver, Resident, Area, Street
-
+from flask import current_app
 
 def initialize():
     db.drop_all()
@@ -77,42 +78,60 @@ def initialize():
 
 def seed_demo_areas_and_streets():
     """
-    Add default Areas + Streets if they don't already exist.
-    Does NOT drop tables or delete anything.
-    Safe to run on Render with existing data (e.g. 'Unassigned').
+    Idempotent demo data seeding for Areas and Streets.
+    Safe for Postgres; rolls back on any error so the session is never left dirty.
     """
+    # Optionally allow skipping via env var if you ever need to
+    if os.getenv("SKIP_DEMO_SEED") == "1":
+        current_app.logger.info("Skipping demo area/street seed via SKIP_DEMO_SEED")
+        return
 
-    default_data = {
-        "St. Augustine": [
-            "Agostini Street",
-            "St Augustine Circ.",
-            "Evans Street",
-        ],
-        "Curepe": [
-            "Southern Main Road",
-            "Cipriani Street",
-            "Evans Street Ext.",
-        ],
-        "Sangre Grande": [
-            "Picton Road",
-            "Foster Road",
-        ],
-    }
+    try:
+        # --- AREAS ---
+        demo_areas = [
+            "Unassigned",
+            "Curepe/St Aug",
+            "San Juan",
+            "Sangre Grande",
+            # etc – keep names within your column lengths
+        ]
 
-    for area_name, streets in default_data.items():
-       
-        area = Area.query.filter_by(name=area_name).first()
-        if not area:
-            area = Area(name=area_name)
-            db.session.add(area)
-            db.session.flush() 
+        name_to_area = {}
 
-        for street_name in streets:
+        for name in demo_areas:
+            area = Area.query.filter_by(name=name).first()
+            if not area:
+                area = Area(name=name)
+                db.session.add(area)
+            name_to_area[name] = area
+
+        db.session.flush()  # get IDs for new Areas
+
+        # --- STREETS ---
+        demo_streets = [
+            ("Main Road", "Curepe/St Aug"),
+            ("St Aug Circ", "Curepe/St Aug"),   # <= 20 chars
+            ("High St", "San Juan"),
+            # etc – ALL names <= 20 chars
+        ]
+
+        for street_name, area_name in demo_streets:
+            area = name_to_area.get(area_name)
+            if not area:
+                continue  # or raise/log if you prefer
+
             exists = Street.query.filter_by(
                 name=street_name,
                 areaId=area.id
             ).first()
-            if not exists:
-                db.session.add(Street(name=street_name, areaId=area.id))
 
-    db.session.commit()
+            if not exists:
+                s = Street(name=street_name, areaId=area.id)
+                db.session.add(s)
+
+        db.session.commit()
+        current_app.logger.info("Demo Areas/Streets seeded successfully")
+
+    except Exception as e:
+        db.session.rollback()
+        current_app.logger.exception("Error seeding demo Areas/Streets: %s", e)
