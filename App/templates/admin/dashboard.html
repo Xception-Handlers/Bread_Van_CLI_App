@@ -1,0 +1,198 @@
+{% extends "layout.html" %}
+{% block title %}Admin Dashboard{% endblock %}
+
+{% block content %}
+<div class="card bv-card z-depth-2">
+  <div class="card-content">
+    <div class="bv-card-header">
+      <span class="card-title">
+        <i class="material-icons">admin_panel_settings</i>
+        Admin Dashboard
+      </span>
+    </div>
+  </div>
+</div>
+
+<div class="row">
+  <!-- CREATE DRIVER FORM -->
+  <div class="col s12 m6">
+    <div class="card">
+      <div class="card-content">
+        <span class="card-title">Create Driver</span>
+        <form method="POST" action="{{ url_for('web_views.admin_create_driver_view') }}">
+          <div class="input-field">
+            <input id="driver_username" name="username" type="text" required>
+            <label for="driver_username">Username</label>
+          </div>
+          <div class="input-field">
+            <input id="driver_password" name="password" type="password" required>
+            <label for="driver_password">Password</label>
+          </div>
+          <button class="btn rounded-btn" type="submit">
+            Create Driver
+          </button>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- CREATE RESIDENT FORM -->
+  <div class="col s12 m6">
+    <div class="card">
+      <div class="card-content">
+        <span class="card-title">Create Resident</span>
+        <form method="POST" action="{{ url_for('web_views.admin_create_resident_view') }}">
+          <div class="input-field">
+            <input id="resident_username" name="username" type="text" required>
+            <label for="resident_username">Username</label>
+          </div>
+          <div class="input-field">
+            <input id="resident_password" name="password" type="password" required>
+            <label for="resident_password">Password</label>
+          </div>
+
+          <!-- Area select -->
+          <div class="input-field">
+            <select name="area_id" required>
+              <option value="" disabled selected>Choose area</option>
+              {% for area in areas %}
+                <option value="{{ area.id }}">{{ area.name }}</option>
+              {% endfor %}
+            </select>
+            <label>Area</label>
+          </div>
+
+          <!-- Street select -->
+          <div class="input-field">
+            <select name="street_id" required>
+              <option value="" disabled selected>Choose street</option>
+              {% for street in streets %}
+                <option value="{{ street.id }}">
+                  {{ street.name }} (Area {{ street.areaId }})
+                </option>
+              {% endfor %}
+            </select>
+            <label>Street</label>
+          </div>
+
+          <div class="input-field">
+            <input id="house_number" name="house_number" type="number" min="1" required>
+            <label for="house_number">House Number</label>
+          </div>
+
+          <button class="btn rounded-btn" type="submit">
+            Create Resident
+          </button>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Existing tables for overview -->
+<div class="row">
+  <!-- Areas -->
+  <div class="col s12 m6">
+    <h5>Areas</h5>
+    <table class="highlight">
+      <thead>
+        <tr>
+          <th>ID</th>
+          <th>Name</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% if areas and areas|length > 0 %}
+          {% for area in areas %}
+          <tr>
+            <td>{{ area.id }}</td>
+            <td>{{ area.name }}</td>
+          </tr>
+          {% endfor %}
+        {% else %}
+          <tr><td colspan="2" class="grey-text">No areas found.</td></tr>
+        {% endif %}
+      </tbody>
+    </table>
+  </div>
+
+  <!-- Streets -->
+  <div class="col s12 m6">
+    <h5>Streets</h5>
+    <table class="highlight">
+      <thead>
+        <tr>
+          <th>ID</th>
+          <th>Name</th>
+          <th>Area</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% if streets and streets|length > 0 %}
+          {% for street in streets %}
+          <tr>
+            <td>{{ street.id }}</td>
+            <td>{{ street.name }}</td>
+            <td>{{ street.areaId }}</td>
+          </tr>
+          {% endfor %}
+        {% else %}
+          <tr><td colspan="3" class="grey-text">No streets found.</td></tr>
+        {% endif %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+  <!-- Drivers -->
+  <div class="col s12 m4">
+    <h5>Drivers</h5>
+    <table class="highlight">
+      <thead>
+        <tr>
+          <th>ID</th>
+          <th>Username</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% if drivers and drivers|length > 0 %}
+          {% for d in drivers %}
+          <tr>
+            <td>{{ d.id }}</td>
+            <td>{{ d.username }}</td>
+          </tr>
+          {% endfor %}
+        {% else %}
+          <tr><td colspan="2" class="grey-text">No drivers found.</td></tr>
+        {% endif %}
+      </tbody>
+    </table>
+  </div>
+
+  <!-- Residents -->
+  <div class="col s12 m4">
+    <h5>Residents</h5>
+    <table class="highlight">
+      <thead>
+        <tr>
+          <th>ID</th>
+          <th>Username</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% if residents and residents|length > 0 %}
+          {% for r in residents %}
+          <tr>
+            <td>{{ r.id }}</td>
+            <td>{{ r.username }}</td>
+          </tr>
+          {% endfor %}
+        {% else %}
+          <tr><td colspan="2" class="grey-text">No residents found.</td></tr>
+        {% endif %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+{% endblock %}

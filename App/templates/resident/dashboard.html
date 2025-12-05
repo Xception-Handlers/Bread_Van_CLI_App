@@ -1,0 +1,196 @@
+{% extends "layout.html" %}
+{% block title %}Resident Dashboard{% endblock %}
+
+{% block content %}
+<h4>Resident Dashboard</h4>
+
+<!-- Resident info -->
+<div class="card">
+  <div class="card-content">
+    <span class="card-title">{{ resident.username }}</span>
+    <p>
+      <strong>Address:</strong><br>
+      Area:
+      {% if area %}
+        {{ area.name }}
+      {% else %}
+        #{{ resident.areaId }}
+      {% endif %}
+      <br>
+      Street:
+      {% if street %}
+        {{ street.name }}
+      {% else %}
+        #{{ resident.streetId }}
+      {% endif %}
+      <br>
+      House #: {{ resident.houseNumber }}
+    </p>
+  </div>
+</div>
+
+<!-- Inbox -->
+<h5>Inbox</h5>
+{% if inbox %}
+  <ul class="collection">
+    {% for m in inbox %}
+      <li class="collection-item">{{ m }}</li>
+    {% endfor %}
+  </ul>
+{% else %}
+  <p>No notifications yet.</p>
+{% endif %}
+
+<h5>Upcoming Drives on Your Street</h5>
+
+{% if upcoming_drives %}
+  <table class="striped responsive-table">
+    <thead>
+      <tr>
+        <th>Drive #</th>
+        <th>Date</th>
+        <th>Time</th>
+        <th>Driver</th>
+        <th>Menu</th>
+        <th>Status</th>
+        <th>Action</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for d in upcoming_drives %}
+        {% set my_stop = resident_stops_by_drive.get(d.id) %}
+        <tr>
+          <td>{{ d.id }}</td>
+          <td>
+            {% if d.date %}
+              {{ d.date.strftime("%Y-%m-%d") }}
+            {% else %}
+              -
+            {% endif %}
+          </td>
+          <td>
+            {% if d.time %}
+              {{ d.time.strftime("%H:%M") }}
+            {% else %}
+              -
+            {% endif %}
+          </td>
+          <td>
+            {% if d.driver %}
+              {{ d.driver.username }}
+            {% else %}
+              Driver #{{ d.driverId }}
+            {% endif %}
+          </td>
+
+          <!-- Menu column -->
+          <td>
+            <a class="btn-small grey modal-trigger"
+               href="#menuModal-{{ d.id }}">
+              See menu
+            </a>
+          </td>
+
+          <!-- Status column -->
+          <td>
+            {% if not my_stop or my_stop.status == "Cancelled" %}
+              -
+            {% elif my_stop.status == "Pending" %}
+              Waiting for approval
+            {% elif my_stop.status == "Approved" %}
+              Subscribed
+            {% elif my_stop.status == "Rejected" %}
+              Rejected
+            {% else %}
+              {{ my_stop.status }}
+            {% endif %}
+          </td>
+
+          <!-- Action column -->
+          <td>
+            {# No stop or previously cancelled/rejected => can request again #}
+            {% if not my_stop or my_stop.status in ["Cancelled", "Rejected"] %}
+              <form method="POST" action="{{ url_for('web_views.resident_dashboard') }}">
+                <input type="hidden" name="action" value="subscribe">
+                <input type="hidden" name="drive_id" value="{{ d.id }}">
+                <button class="btn-small teal waves-effect waves-light" type="submit">
+                  Request Stop
+                </button>
+              </form>
+
+            {% elif my_stop.status == "Pending" %}
+              <span class="grey-text">Waiting for approval</span>
+
+            {% elif my_stop.status == "Approved" %}
+              <form method="POST" action="{{ url_for('web_views.resident_dashboard') }}">
+                <input type="hidden" name="action" value="cancel_stop">
+                <input type="hidden" name="drive_id" value="{{ d.id }}">
+                <button class="btn-small red darken-1 waves-effect waves-light" type="submit">
+                  Cancel
+                </button>
+              </form>
+            {% endif %}
+          </td>
+        </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+
+  {# Modals for each drive's menu stay exactly as you had them #}
+  {% for d in upcoming_drives %}
+    {% set stocks = driver_menus.get(d.driverId, []) %}
+    <div id="menuModal-{{ d.id }}" class="modal">
+      <div class="modal-content">
+        <h5>
+          Menu for
+          {% if d.driver %}
+            {{ d.driver.username }}
+          {% else %}
+            Driver #{{ d.driverId }}
+          {% endif %}
+        </h5>
+
+        {% if stocks %}
+          <table class="striped">
+            <thead>
+              <tr>
+                <th>Item</th>
+                <th>Available</th>
+                <th>Price (TTD)</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for s in stocks %}
+                <tr>
+                  <td>{{ s.item.name }}</td>
+                  <td>{{ s.quantity }}</td>
+                  <td>{{ "%.2f"|format(s.item.price) }}</td>
+                </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        {% else %}
+          <p>This driver has not added a menu yet.</p>
+        {% endif %}
+      </div>
+      <div class="modal-footer">
+        <a href="#!" class="modal-close btn-flat">Close</a>
+      </div>
+    </div>
+  {% endfor %}
+
+{% else %}
+  <p>No upcoming drives for your street yet.</p>
+{% endif %}
+
+{% endblock %}
+
+{% block scripts %}
+  {{ super() }}
+  <script>
+    document.addEventListener('DOMContentLoaded', function() {
+      var modals = document.querySelectorAll('.modal');
+      M.Modal.init(modals);
+    });
+  </script>
+{% endblock %}
