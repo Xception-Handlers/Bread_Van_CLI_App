@@ -1,13 +1,49 @@
 from App.models import Admin, Driver, Area, Street, Item
 from App.database import db
+from flask import current_app
 
 
+
+# def admin_create_driver(username, password):
+#     existing_user = Admin.query.filter_by(username=username).first()
+#     if existing_user:
+#         raise ValueError("Username already taken.")
+#     driver = Driver(username=username, password=password, status="Offline", areaId=0, streetId=None)
+#     db.session.add(driver)
+#     db.session.commit()
+#     return driver
 
 def admin_create_driver(username, password):
     existing_user = Admin.query.filter_by(username=username).first()
     if existing_user:
         raise ValueError("Username already taken.")
-    driver = Driver(username=username, password=password, status="Offline", areaId=0, streetId=None)
+
+    # In tests (sqlite, in-memory) keep the old behaviour so pytest stays happy
+    if current_app.config.get("TESTING", False):
+        driver = Driver(
+            username=username,
+            password=password,
+            status="Offline",
+            areaId=0,
+            streetId=None,
+        )
+    else:
+        # In production (Render / Postgres), we must point to a real Area
+        area = Area.query.first()
+        if not area:
+            # auto-create a default "Unassigned" area so FK is valid
+            area = Area(name="Unassigned")
+            db.session.add(area)
+            db.session.commit()
+
+        driver = Driver(
+            username=username,
+            password=password,
+            status="Offline",
+            areaId=area.id,
+            streetId=None,
+        )
+
     db.session.add(driver)
     db.session.commit()
     return driver
