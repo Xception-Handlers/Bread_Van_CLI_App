@@ -11,6 +11,12 @@ class Drive(db.Model):
 
     area = db.relationship("Area", backref="drives")
     street = db.relationship("Street", backref="drives")
+    stops = db.relationship(
+        'Stop',
+        back_populates='drive',
+        lazy='dynamic'
+    )
+    driver = db.relationship("Driver", backref="drives", lazy=True)
 
     def __init__(self, driverId, areaId, streetId, date, time, status):
         self.driverId = driverId
@@ -53,4 +59,4 @@ class Drive(db.Model):
         for observer in self._observers:
             update_method = getattr(observer, "update", None)
             if callable(update_method):
-                update_method(payload) 
+                update_method(payload)
