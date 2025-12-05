@@ -74,3 +74,45 @@ def initialize():
                      
     resident2.request_stop(0)
     db.session.commit()
+
+def seed_demo_areas_and_streets():
+    """
+    Add default Areas + Streets if they don't already exist.
+    Does NOT drop tables or delete anything.
+    Safe to run on Render with existing data (e.g. 'Unassigned').
+    """
+
+    default_data = {
+        "St. Augustine": [
+            "Agostini Street",
+            "St Augustine Circular",
+            "Evans Street",
+        ],
+        "Curepe": [
+            "Southern Main Road",
+            "Cipriani Street",
+            "Evans Street Extension",
+        ],
+        "Sangre Grande": [
+            "Picton Road",
+            "Foster Road",
+        ],
+    }
+
+    for area_name, streets in default_data.items():
+       
+        area = Area.query.filter_by(name=area_name).first()
+        if not area:
+            area = Area(name=area_name)
+            db.session.add(area)
+            db.session.flush() 
+
+        for street_name in streets:
+            exists = Street.query.filter_by(
+                name=street_name,
+                areaId=area.id
+            ).first()
+            if not exists:
+                db.session.add(Street(name=street_name, areaId=area.id))
+
+    db.session.commit()

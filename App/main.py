@@ -87,14 +87,14 @@ def create_app(overrides={}):
 
     app.app_context().push()
 
-    # 🔸 Only auto-initialize when explicitly told to (e.g. Render)
-    from App.models import Area
-    from App.controllers.initialize import initialize
     import os
+    from App.models import Area, Street
+    from App.controllers.initialize import initialize, seed_demo_areas_and_streets
 
     if os.getenv("BREADVAN_AUTO_INIT") == "1":
-        # Only if DB is still empty – avoids wiping real data
         if Area.query.count() == 0:
             initialize()
+        elif Street.query.count() == 0:
+            seed_demo_areas_and_streets()
 
     return app
