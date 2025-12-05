@@ -8,7 +8,7 @@ from .driver_views import driver_views
 from .resident_views import resident_views
 from .admin_views import admin_views
 from .common_views import common_views
+from .web import web_views
 
-
-views = [user_views, index_views, auth_views, common_views, driver_views, resident_views, admin_views]
+views = [user_views, index_views, auth_views, common_views, driver_views, resident_views, admin_views, web_views]
 # blueprints must be added to this list
